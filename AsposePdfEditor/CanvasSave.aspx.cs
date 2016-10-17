@@ -26,7 +26,7 @@ namespace AsposePdfEditor
         protected void Page_Load(object sender, EventArgs e)
         {
 
-           
+
         }
 
         public void ProcessRequest(HttpContext context)
@@ -74,8 +74,8 @@ namespace AsposePdfEditor
 
                         //Or just save it locally
                         file.SaveAs(Server.MapPath("Attachments/" + file.FileName));
-                        AddAttachments(Server.MapPath("Attachments/" + file.FileName), file.FileName);                      
-                        
+                        AddAttachments(Server.MapPath("Attachments/" + file.FileName), file.FileName);
+
                         context.Response.Write(file.FileName);
                     }
                     else
@@ -133,7 +133,7 @@ namespace AsposePdfEditor
                         string name = filename[filename.Length - 1];
 
                         // Download the Web resource and save it into the current filesystem folder.
-                        myWebClient.DownloadFile(file_url, HttpContext.Current.Server.MapPath("Images/"+name));
+                        myWebClient.DownloadFile(file_url, HttpContext.Current.Server.MapPath("Images/" + name));
 
                         return name;
                     }
@@ -185,10 +185,10 @@ namespace AsposePdfEditor
             }
         }
 
-       
+
 
         [WebMethod()]
-        protected static void ScaleImage(System.Drawing.Image image, int maxWidth, int maxHeight, string path, out string height,out string Aratio)
+        protected static void ScaleImage(System.Drawing.Image image, int maxWidth, int maxHeight, string path, out string height, out string Aratio)
         {
             var ratio = (double)maxWidth / image.Width;
             Aratio = ratio.ToString();
@@ -214,13 +214,13 @@ namespace AsposePdfEditor
 
                 doc.Save(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
 
-                System.IO.File.Delete(HttpContext.Current.Server.MapPath("Input/" +imageName));
+                System.IO.File.Delete(HttpContext.Current.Server.MapPath("Input/" + imageName));
             }
             catch (Exception Exp)
             {
-               // return Exp.Message;
+                // return Exp.Message;
             }
-            
+
         }
 
         [WebMethod()]
@@ -241,23 +241,23 @@ namespace AsposePdfEditor
 
                 if (pageFrom > pageTo)
                 {
-                    doc.Pages.Delete(pageFrom+1);
+                    doc.Pages.Delete(pageFrom + 1);
                     str.Insert(pageTo, pageList[pageFrom - 1]);
                     str.RemoveAt(pageFrom);
                 }
                 else
                 {
-                    doc.Pages.Delete(pageFrom);                    
+                    doc.Pages.Delete(pageFrom);
                     str.Insert(pageTo, pageList[pageFrom - 1]);
-                    str.RemoveAt(pageFrom-1);
+                    str.RemoveAt(pageFrom - 1);
                 }
 
                 doc.Save(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
 
                 pageList = str.ToArray();
 
-                
-                                
+
+
             }
             catch (Exception Exp)
             {
@@ -270,215 +270,380 @@ namespace AsposePdfEditor
 
 
         [WebMethod()]
-        public static void UploadPic(List<shap> shapes , string filename, string aspectRatio)
+        public static void UploadPic(List<shap> shapes, string filename, string aspectRatio)
         {
-          
-                Document doc = new Document(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
 
-                //Create image stamp
-                ImageStamp imageStamp = new ImageStamp(HttpContext.Current.Server.MapPath("test.png"));
+            Document doc = new Document(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
 
-                for (int i = 0; i < shapes.Count; i++)
+            //Create image stamp
+            ImageStamp imageStamp = new ImageStamp(HttpContext.Current.Server.MapPath("test.png"));
+
+            for (int i = 0; i < shapes.Count; i++)
+            {
+                //create stamp
+                Aspose.Pdf.Facades.Stamp stamp = new Aspose.Pdf.Facades.Stamp();
+
+                float shapeX = (shapes[i].x * 72 / 150) / (float)Convert.ToDouble(shapes[i].ratio);
+                float shapeY = (shapes[i].y * 72 / 150) / (float)Convert.ToDouble(shapes[i].ratio);
+                float shapeW = (shapes[i].w * 72 / 150) / (float)Convert.ToDouble(shapes[i].ratio);
+                float shapeH = (shapes[i].h * 72 / 150) / (float)Convert.ToDouble(shapes[i].ratio);
+
+                double yaxis = (float)(doc.Pages[shapes[i].p].Rect.URY - (shapeH + shapeY));
+
+                var isSpecial = true;//regexItem.IsMatch(shapes[i].imName);
+
+                if (shapes[i].Itype == "highlight" || shapes[i].Itype == "image")
                 {
-                    //create stamp
-                    Aspose.Pdf.Facades.Stamp stamp = new Aspose.Pdf.Facades.Stamp();
 
-                    float shapeX = (shapes[i].x * 72 / 150) / (float)Convert.ToDouble(shapes[i].ratio);
-                    float shapeY = (shapes[i].y * 72 / 150) / (float)Convert.ToDouble(shapes[i].ratio);
-                    float shapeW = (shapes[i].w * 72 / 150) / (float)Convert.ToDouble(shapes[i].ratio);
-                    float shapeH = (shapes[i].h * 72 / 150) / (float)Convert.ToDouble(shapes[i].ratio);
-                                                            
-                    double yaxis = (float)(doc.Pages[shapes[i].p].Rect.URY - (shapeH + shapeY));
-
-                    var isSpecial = true;//regexItem.IsMatch(shapes[i].imName);
-
-                    if (shapes[i].Itype == "highlight" || shapes[i].Itype == "image")
+                    if (shapes[i].Itype == "highlight")
+                    {
+                        imageStamp = new ImageStamp(HttpContext.Current.Server.MapPath("test.png"));
+                    }
+                    else
                     {
 
-                        if (shapes[i].Itype == "highlight")
+                        imageStamp = new ImageStamp(HttpContext.Current.Server.MapPath("Images/" + shapes[i].imName));
+
+                    }
+
+                    imageStamp.Background = false;
+                    imageStamp.XIndent = (float)(shapeX);
+                    imageStamp.YIndent = (float)(yaxis);
+                    imageStamp.Height = shapeH;
+                    imageStamp.Width = shapeW;
+
+                    //Add stamp to particular page
+                    doc.Pages[shapes[i].p].AddStamp(imageStamp);
+                }
+                else if (shapes[i].Itype == "text")
+                {
+
+                    /*
+                    // create TextBuilder for first page
+                    TextBuilder tb = new TextBuilder(doc.Pages[shapes[i].p]);
+
+                    // TextFragment with sample text
+                    TextFragment fragment = new TextFragment(shapes[i].t);
+
+                    // set the font for TextFragment
+                    fragment.TextState.Font = FontRepository.FindFont(shapes[i].n);
+                    fragment.TextState.FontSize = Convert.ToInt32(shapes[i].s);
+                    if (shapes[i].wt == "bold")
+                    {
+                        fragment.TextState.FontStyle = FontStyles.Bold;
+                    }
+
+                    if (shapes[i].st == "italic")
+                    {
+                        fragment.TextState.FontStyle = FontStyles.Italic;
+                    }
+
+                    // set the formatting of text as Underline
+                    // fragment.TextState.Underline = true;
+                    fragment.TextState.ForegroundColor = GetColor(shapes[i].c);
+                    // specify the position where TextFragment needs to be placed
+                    fragment.Position = new Position((float)(shapeX), (float)(yaxis));
+
+                   // fragment.Rectangle.Rotate((360 - (Convert.ToDouble(shapes[i].fieldType)) * 180 / Math.PI);
+
+                    // append TextFragment to PDF file
+                    tb.AppendText(fragment);
+                    */
+
+                    //create text stamp
+                    TextStamp textStamp = new TextStamp(shapes[i].t);
+                    //set whether stamp is background
+                    // textStamp.Background = true;
+                    //set origin
+                    textStamp.XIndent = (float)(shapeX);
+                    textStamp.YIndent = (float)(yaxis);
+                    //rotate stamp
+                    textStamp.RotateAngle = 360 - ((Convert.ToDouble(shapes[i].fieldType)) * 180 / Math.PI);
+
+                    //set text properties
+                    textStamp.TextState.Font = FontRepository.FindFont(shapes[i].n);
+                    textStamp.TextState.FontSize = Convert.ToInt32(shapes[i].s) * 0.75f;
+
+                    if (shapes[i].wt == "bold")
+                    {
+                        textStamp.TextState.FontStyle = FontStyles.Bold;
+                    }
+
+                    if (shapes[i].st == "italic")
+                    {
+                        textStamp.TextState.FontStyle = FontStyles.Italic;
+                    }
+
+
+                    textStamp.TextState.ForegroundColor = GetColor(shapes[i].c);
+                    //add stamp to particular page
+                    doc.Pages[shapes[i].p].AddStamp(textStamp);
+
+                }
+                else if (shapes[i].Itype == "field" && isSpecial)
+                {
+                    if (shapes[i].fieldType == "Text")
+                    {
+                        // Get a field
+                        TextBoxField textBoxField = doc.Form.Fields[Convert.ToInt32(shapes[i].imName)] as TextBoxField;
+                        // Modify field value
+                        textBoxField.Value = shapes[i].t;
+
+                    }
+                    else if (shapes[i].fieldType == "CheckBox")
+                    {
+
+                        // Get a field
+                        CheckboxField checkBoxField = doc.Form.Fields[Convert.ToInt32(shapes[i].imName)] as CheckboxField;
+                        if (shapes[i].t != "")
+                            // Modify field value
+                            checkBoxField.Checked = Convert.ToBoolean(shapes[i].t);
+                    }
+                    else if (shapes[i].fieldType == "Radio")
+                    {
+                        RadioButtonOptionField field = (RadioButtonOptionField)doc.Form.Fields[Convert.ToInt32(shapes[i].imName)];
+
+                        RadioButtonField rbf = (RadioButtonField)field.Parent;
+                        if (Convert.ToBoolean(shapes[i].t))
                         {
-                            imageStamp = new ImageStamp(HttpContext.Current.Server.MapPath("test.png"));
+                            rbf.Selected = rbf.Options[field.OptionName].Index;
+
                         }
                         else
                         {
+                            field.ActiveState = "Off";
 
-                            imageStamp = new ImageStamp(HttpContext.Current.Server.MapPath("Images/"+shapes[i].imName));
-                        
                         }
-                                                
-                        imageStamp.Background = false;
-                        imageStamp.XIndent = (float)(shapeX);
-                        imageStamp.YIndent = (float)(yaxis);
-                        imageStamp.Height = shapeH;
-                        imageStamp.Width = shapeW;
-                        
-                        //Add stamp to particular page
-                        doc.Pages[shapes[i].p].AddStamp(imageStamp);
-                    }                   
-                    else if(shapes[i].Itype == "text")
-                    {
-
-                        /*
-                        // create TextBuilder for first page
-                        TextBuilder tb = new TextBuilder(doc.Pages[shapes[i].p]);
-
-                        // TextFragment with sample text
-                        TextFragment fragment = new TextFragment(shapes[i].t);
-
-                        // set the font for TextFragment
-                        fragment.TextState.Font = FontRepository.FindFont(shapes[i].n);
-                        fragment.TextState.FontSize = Convert.ToInt32(shapes[i].s);
-                        if (shapes[i].wt == "bold")
-                        {
-                            fragment.TextState.FontStyle = FontStyles.Bold;
-                        }
-
-                        if (shapes[i].st == "italic")
-                        {
-                            fragment.TextState.FontStyle = FontStyles.Italic;
-                        }
-
-                        // set the formatting of text as Underline
-                        // fragment.TextState.Underline = true;
-                        fragment.TextState.ForegroundColor = GetColor(shapes[i].c);
-                        // specify the position where TextFragment needs to be placed
-                        fragment.Position = new Position((float)(shapeX), (float)(yaxis));
-
-                       // fragment.Rectangle.Rotate((360 - (Convert.ToDouble(shapes[i].fieldType)) * 180 / Math.PI);
-
-                        // append TextFragment to PDF file
-                        tb.AppendText(fragment);
-                        */
-                        
-                        //create text stamp
-                        TextStamp textStamp = new TextStamp(shapes[i].t);
-                        //set whether stamp is background
-                       // textStamp.Background = true;
-                        //set origin
-                        textStamp.XIndent = (float)(shapeX); 
-                        textStamp.YIndent = (float)(yaxis);
-                        //rotate stamp
-                        textStamp.RotateAngle = 360 - ((Convert.ToDouble(shapes[i].fieldType)) * 180 / Math.PI);
-                        
-                        //set text properties
-                        textStamp.TextState.Font = FontRepository.FindFont(shapes[i].n);
-                        textStamp.TextState.FontSize = Convert.ToInt32(shapes[i].s) * 0.75f;
-
-                        if (shapes[i].wt == "bold")
-                        {
-                            textStamp.TextState.FontStyle = FontStyles.Bold;
-                        }
-
-                        if (shapes[i].st == "italic")
-                        {
-                            textStamp.TextState.FontStyle = FontStyles.Italic;
-                        }
-                        
-                       
-                        textStamp.TextState.ForegroundColor = GetColor(shapes[i].c);
-                        //add stamp to particular page
-                        doc.Pages[shapes[i].p].AddStamp(textStamp);
-
                     }
-                    else if (shapes[i].Itype == "field" && isSpecial)
+                    else if (shapes[i].fieldType == "ComboBox")
                     {
-                        if (shapes[i].fieldType == "Text")
+
+                        // Get a field
+                        ComboBoxField comboBoxField = doc.Form.Fields[Convert.ToInt32(shapes[i].imName)] as ComboBoxField;
+                        var values = shapes[i].t.Split(new string[] { "^^^" }, StringSplitOptions.None)[0];
+
+                        foreach (var item in comboBoxField.Options.Cast<Option>())
                         {
-                            // Get a field
-                            TextBoxField textBoxField = doc.Form.Fields[Convert.ToInt32(shapes[i].imName)] as TextBoxField;
-                            // Modify field value
-                            textBoxField.Value = shapes[i].t;
-                        
-                        }
-                        else if (shapes[i].fieldType == "CheckBox")
-                        {
-
-                            // Get a field
-                            CheckboxField checkBoxField = doc.Form.Fields[Convert.ToInt32(shapes[i].imName)] as CheckboxField;
-                            if(shapes[i].t != "")
-                            // Modify field value
-                            checkBoxField.Checked = Convert.ToBoolean(shapes[i].t);
-                        }
-                        else if (shapes[i].fieldType == "Radio")
-                        {
-                            RadioButtonOptionField field = (RadioButtonOptionField)doc.Form.Fields[Convert.ToInt32(shapes[i].imName)];
-
-                            RadioButtonField rbf = (RadioButtonField)field.Parent;
-                            if (Convert.ToBoolean(shapes[i].t))
+                            if (item.Value == values)
                             {
-                                rbf.Selected = rbf.Options[field.OptionName].Index;
 
-                            }
-                            else
-                            {
-                                field.ActiveState = "Off";
-
-                            }
-                        }
-                        else if (shapes[i].fieldType == "ComboBox")
-                        {                            
-
-                            // Get a field
-                            ComboBoxField comboBoxField = doc.Form.Fields[Convert.ToInt32(shapes[i].imName)] as ComboBoxField;
-                            var values = shapes[i].t.Split(new string[]{"^^^"},StringSplitOptions.None)[0];
-
-                            foreach (var item in comboBoxField.Options.Cast<Option>())
-                            {
-                                if (item.Value == values)
-                                {
-
-                                    comboBoxField.Selected = item.Index;
-                                }
+                                comboBoxField.Selected = item.Index;
                             }
                         }
                     }
-
                 }
-            
-                doc.Save(HttpContext.Current.Server.MapPath("Convert/Export.pdf"));
-            
-           
+
+            }
+
+            doc.Save(HttpContext.Current.Server.MapPath("Convert/Export.pdf"));
+
+
         }
 
         [WebMethod]
         public static string CreateNewFile()
         {
-            Startup();
-
-            Document doc = new Document();
-            doc.Pages.Add();
-            doc.Save(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
-
-
-            return ImageConverter();
+            try
+            {
+                Startup();
+                Document doc = new Document();
+                doc.Pages.Add();
+                doc.Save(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
+                return ImageConverter();
+            }
+            catch (Exception)
+           {
+                throw;
+            }
         }
         [WebMethod]
         public static string ImageConverter()
         {
-                          
-                Document doc = new Document(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
-                
-                
-                string Aratio = "";
-                string pages = "";
-                string Ratios = "";
-                string height = "";
-                string Allheights = "";
-                string fields = "";
-                int TotalPages = 0;
-                bool licensed = CheckLicense();
 
-                if (licensed || (!licensed && doc.Pages.Count <= 4))
-                    TotalPages = doc.Pages.Count;
-                else
-                    TotalPages = 4;
+            Document doc = new Document(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
 
-                for (int pageCount = 1; pageCount <= TotalPages; pageCount++)
+
+            string Aratio = "";
+            string pages = "";
+            string Ratios = "";
+            string height = "";
+            string Allheights = "";
+            string fields = "";
+            int TotalPages = 0;
+            bool licensed = CheckLicense();
+
+            if (licensed || (!licensed && doc.Pages.Count <= 4))
+                TotalPages = doc.Pages.Count;
+            else
+                TotalPages = 4;
+
+            for (int pageCount = 1; pageCount <= TotalPages; pageCount++)
+            {
+                using (FileStream imageStream = new FileStream(HttpContext.Current.Server.MapPath("Input/image-1" + pageCount + ".png"), FileMode.Create))
+                {
+                    //Create Resolution object
+                    // Resolution resolution = new Resolution(150);
+                    //create PNG device with specified attributes
+                    PngDevice pngDevice = new PngDevice();
+                    //Convert a particular page and save the image to stream
+                    pngDevice.Process(doc.Pages[pageCount], imageStream);
+                    //Close stream
+                    imageStream.Close();
+
+                    System.Drawing.Image image = System.Drawing.Image.FromFile(HttpContext.Current.Server.MapPath("Input/image-1" + pageCount + ".png"));
+
+
+
+                    ScaleImage(image, 1138, 760, HttpContext.Current.Server.MapPath("Input/image" + pageCount + ".png"), out height, out Aratio);
+
+                    image.Dispose();
+
+                    if (pageCount == 1)
+                        fields = CheckFields(doc, pageCount, "image" + pageCount + ".png", fields, Convert.ToDouble(Aratio), licensed);
+
+                    pages = pages + "," + "image" + pageCount + ".png";
+                    Ratios = Ratios + "," + Aratio;
+                    Allheights = Allheights + "," + height;
+
+                }
+
+            }
+
+            Ratios = Ratios.Substring(1, Ratios.Length - 1);
+            pages = pages.Substring(1, pages.Length - 1);
+            Allheights = Allheights.Substring(1, Allheights.Length - 1);
+            if (fields != "")
+            {
+                fields = fields.Substring(3, fields.Length - 3);
+            }
+            return pages + "%#" + Ratios + "%#" + Allheights + "%#" + fields;
+
+        }
+
+        private static string CheckFields(Document doc, int pageCount, string filename, string fields, double ratio, bool licensed)
+        {
+            double marginLeft = doc.Pages[pageCount].PageInfo.Margin.Left;
+            double marginTop = doc.Pages[pageCount].PageInfo.Margin.Top;
+
+            int fieldcounter = 0;
+
+            Aspose.Pdf.Facades.Form pdfForm = new Aspose.Pdf.Facades.Form(doc);
+
+            // Get values from all fields
+            foreach (Field formField in doc.Form.Fields)
+            {
+
+
+                double lowerLeftY = (doc.Pages[pageCount].Rect.Height) - (formField.Rect.ToRect().Y + formField.Height);
+
+                double lowerLeftX = formField.Rect.ToRect().X;
+                var fieldType = formField.GetType().Name; //pdfForm.GetFieldType(formField.FullName);
+                var imValue = "";
+
+                if (fieldType.ToString() == "CheckboxField" || fieldType.ToString() == "ComboBoxField" || fieldType.ToString() == "RadioButtonOptionField" || fieldType.ToString() == "TextBoxField")
+                {
+                    var value = formField.Value;
+
+                    if (fieldType.ToString() == "TextBoxField")
+                    {
+                        fieldType = "Text";
+                    }
+                    if (fieldType.ToString() == "CheckboxField")
+                    {
+                        CheckboxField field = (CheckboxField)formField;
+                        if (field.Parent != null)
+                            imValue = field.Parent.FullName;
+                        fieldType = "CheckBox";
+                        if (field.Checked)
+                        {
+                            value = "true";
+                        }
+                        else
+                        {
+                            value = "false";
+                        }
+                    }
+                    if (fieldType.ToString() == "RadioButtonOptionField")
+                    {
+                        RadioButtonOptionField field = (RadioButtonOptionField)formField;
+                        RadioButtonField rbf = (RadioButtonField)field.Parent;
+
+                        fieldType = "Radio";
+                        if (field.Parent != null)
+                            imValue = field.Parent.FullName;
+                        if ((rbf.Options[field.OptionName].Index == rbf.Selected))
+                        {
+                            value = "true";
+                        }
+                        else
+                        {
+                            value = "false";
+                        }
+                    }
+                    if (fieldType.ToString() == "ComboBoxField")
+                    {
+                        ComboBoxField field = (ComboBoxField)formField;
+                        string optValues = value;
+                        fieldType = "ComboBox";
+                        foreach (Option opt in field.Options)
+                        {
+
+                            optValues = optValues + "^^^" + opt.Value;
+
+                        }
+                        value = optValues;
+
+
+                    }
+
+                    bool isRequired = pdfForm.IsRequiredField(formField.FullName);
+                    //fields += "$#$" + (lowerLeftX * 2.08) * ratio + "$#$" + (lowerLeftY * 2.08) * ratio + "$#$" + (formField.Width * 2.08) * ratio + "$#$" + (formField.Height * 2.08) * ratio + "$#$" + formField.PageIndex + "$#$" + "image" + formField.PageIndex + ".png" + "$#$" + value + "$#$" + formField.DefaultAppearance.FontName + "$#$" + formField.DefaultAppearance.FontSize + "$#$" + " " + "$#$" + " " + "$#$" + " " + "$#$" + ratio + "$#$" + " " + "$#$" + formField.FullName.Replace('/', '-') + "$#$" + fieldType;
+                    fields += "$#$" + (lowerLeftX * 2.08) * ratio + "$#$" + (lowerLeftY * 2.08) * ratio + "$#$" + (formField.Width * 2.08) * ratio + "$#$" + (formField.Height * 2.08) * ratio + "$#$" + formField.PageIndex + "$#$" + "image" + formField.PageIndex + ".png" + "$#$" + value + "$#$" + formField.DefaultAppearance.FontName + "$#$" + formField.DefaultAppearance.FontSize + "$#$" + " " + "$#$" + " " + "$#$" + isRequired + "$#$" + ratio + "$#$" + imValue + "$#$" + fieldcounter + "$#$" + fieldType;
+                }
+                int length = fields.Length;
+                fieldcounter += 1;
+                if (!licensed && fieldcounter == 5)
+                {
+                    break;
+                }
+            }
+
+
+
+            return fields;
+
+        }
+
+        [WebMethod]
+        public static string AppendConverter(string appPages, string appRatios, string appHeights)
+        {
+
+            Document doc = new Document(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
+            int totalCount = doc.Pages.Count;
+
+            //open second document
+            Document pdfDocument2 = new Document(HttpContext.Current.Server.MapPath("Convert/append.pdf"));
+
+            //add pages of second document to the first
+            doc.Pages.Add(pdfDocument2.Pages);
+
+
+            //save concatenated output file
+            doc.Save(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
+
+            string Aratio = "";
+            string pages = "";
+            string height = "";
+            string Allheights = "";
+
+            for (int pageCount = 1; pageCount <= doc.Pages.Count; pageCount++)
+            {
+                if (pageCount > totalCount)
                 {
                     using (FileStream imageStream = new FileStream(HttpContext.Current.Server.MapPath("Input/image-1" + pageCount + ".png"), FileMode.Create))
                     {
                         //Create Resolution object
-                       // Resolution resolution = new Resolution(150);
+                        //Resolution resolution = new Resolution(300);
                         //create PNG device with specified attributes
                         PngDevice pngDevice = new PngDevice();
                         //Convert a particular page and save the image to stream
@@ -494,226 +659,65 @@ namespace AsposePdfEditor
 
                         image.Dispose();
 
-                        if(pageCount == 1)
-                        fields = CheckFields(doc, pageCount, "image" + pageCount + ".png", fields, Convert.ToDouble(Aratio), licensed);
+                        appPages = appPages + "," + "image" + pageCount + ".png";
 
-                        pages = pages + "," + "image" + pageCount + ".png";
-                        Ratios = Ratios + "," + Aratio;
-                        Allheights = Allheights + "," + height;
-                        
+                        appRatios = appRatios + "," + Aratio;
+
+                        appHeights = appHeights + "," + height;
                     }
-
                 }
 
-                Ratios = Ratios.Substring(1, Ratios.Length - 1);
-                pages = pages.Substring(1, pages.Length -1);
-                Allheights = Allheights.Substring(1, Allheights.Length -1);
-                if (fields != "")
-                {
-                    fields = fields.Substring(3, fields.Length - 3);
-                }
-                return pages + "%#" + Ratios + "%#" + Allheights + "%#" + fields;
-           
-        }
-
-        private static string CheckFields(Document doc, int pageCount, string filename, string fields, double ratio, bool licensed)
-        {
-            double marginLeft = doc.Pages[pageCount].PageInfo.Margin.Left;
-            double marginTop = doc.Pages[pageCount].PageInfo.Margin.Top;
-                       
-            int fieldcounter = 0;
-            
-            Aspose.Pdf.Facades.Form pdfForm = new Aspose.Pdf.Facades.Form(doc);
-
-            // Get values from all fields
-            foreach (Field formField in doc.Form.Fields)
-            {
-                    
-
-                    double lowerLeftY = (doc.Pages[pageCount].Rect.Height) - (formField.Rect.ToRect().Y + formField.Height);
-
-                    double lowerLeftX = formField.Rect.ToRect().X;
-                    var fieldType = formField.GetType().Name; //pdfForm.GetFieldType(formField.FullName);
-                    var imValue = "";
-
-                    if (fieldType.ToString() == "CheckboxField" || fieldType.ToString() == "ComboBoxField" || fieldType.ToString() == "RadioButtonOptionField" || fieldType.ToString() == "TextBoxField")
-                    {
-                        var value = formField.Value;
-
-                        if (fieldType.ToString() == "TextBoxField")
-                        {
-                            fieldType = "Text";
-                        }
-                        if (fieldType.ToString() == "CheckboxField")
-                        {
-                            CheckboxField field = (CheckboxField)formField;
-                            if (field.Parent != null) 
-                            imValue = field.Parent.FullName;
-                            fieldType = "CheckBox";
-                            if (field.Checked)
-                            {
-                                value = "true";
-                            }
-                            else
-                            {
-                                value = "false";
-                            }
-                        }
-                        if (fieldType.ToString() == "RadioButtonOptionField")
-                        {
-                            RadioButtonOptionField field = (RadioButtonOptionField)formField;
-                            RadioButtonField rbf = (RadioButtonField)field.Parent;
-
-                            fieldType = "Radio";
-                            if (field.Parent != null)
-                                imValue = field.Parent.FullName;
-                            if ((rbf.Options[field.OptionName].Index == rbf.Selected))
-                            {
-                                value = "true";
-                            }
-                            else
-                            {
-                                value = "false";
-                            }
-                        }
-                        if (fieldType.ToString() == "ComboBoxField")
-                        {
-                            ComboBoxField field = (ComboBoxField)formField;
-                            string optValues = value;
-                            fieldType = "ComboBox";
-                            foreach (Option opt in field.Options)
-                            {
-
-                                optValues = optValues + "^^^" + opt.Value;
-
-                            }
-                            value = optValues;
-
-
-                        }
-
-                        bool isRequired = pdfForm.IsRequiredField(formField.FullName);
-                        //fields += "$#$" + (lowerLeftX * 2.08) * ratio + "$#$" + (lowerLeftY * 2.08) * ratio + "$#$" + (formField.Width * 2.08) * ratio + "$#$" + (formField.Height * 2.08) * ratio + "$#$" + formField.PageIndex + "$#$" + "image" + formField.PageIndex + ".png" + "$#$" + value + "$#$" + formField.DefaultAppearance.FontName + "$#$" + formField.DefaultAppearance.FontSize + "$#$" + " " + "$#$" + " " + "$#$" + " " + "$#$" + ratio + "$#$" + " " + "$#$" + formField.FullName.Replace('/', '-') + "$#$" + fieldType;
-                        fields += "$#$" + (lowerLeftX * 2.08) * ratio + "$#$" + (lowerLeftY * 2.08) * ratio + "$#$" + (formField.Width * 2.08) * ratio + "$#$" + (formField.Height * 2.08) * ratio + "$#$" + formField.PageIndex + "$#$" + "image" + formField.PageIndex + ".png" + "$#$" + value + "$#$" + formField.DefaultAppearance.FontName + "$#$" + formField.DefaultAppearance.FontSize + "$#$" + " " + "$#$" + " " + "$#$" + isRequired + "$#$" + ratio + "$#$" + imValue + "$#$" + fieldcounter + "$#$" + fieldType;
-                    }
-                    int length = fields.Length;
-                    fieldcounter += 1;
-                    if (!licensed && fieldcounter == 5)
-                    {
-                        break;
-                    }
             }
 
-            
 
-            return fields;
+            return appPages + "%#" + appRatios + "%#" + appHeights;
 
-        }
-
-        [WebMethod]
-        public static string AppendConverter(string appPages, string appRatios, string appHeights)
-        {
-           
-                Document doc = new Document(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
-                int totalCount = doc.Pages.Count;
-
-                //open second document
-                Document pdfDocument2 = new Document(HttpContext.Current.Server.MapPath("Convert/append.pdf"));
-
-                //add pages of second document to the first
-                doc.Pages.Add(pdfDocument2.Pages);
-                               
-
-                //save concatenated output file
-                doc.Save(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
-
-                string Aratio = "";
-                string pages = "";
-                string height = "";
-                string Allheights = "";
-
-                for (int pageCount = 1; pageCount <= doc.Pages.Count; pageCount++)
-                {
-                    if (pageCount > totalCount)
-                    {
-                        using (FileStream imageStream = new FileStream(HttpContext.Current.Server.MapPath("Input/image-1" + pageCount + ".png"), FileMode.Create))
-                        {
-                            //Create Resolution object
-                            //Resolution resolution = new Resolution(300);
-                            //create PNG device with specified attributes
-                            PngDevice pngDevice = new PngDevice();
-                            //Convert a particular page and save the image to stream
-                            pngDevice.Process(doc.Pages[pageCount], imageStream);
-                            //Close stream
-                            imageStream.Close();
-
-                            System.Drawing.Image image = System.Drawing.Image.FromFile(HttpContext.Current.Server.MapPath("Input/image-1" + pageCount + ".png"));
-
-
-
-                            ScaleImage(image, 1138, 760, HttpContext.Current.Server.MapPath("Input/image" + pageCount + ".png"), out height, out Aratio);
-
-                            image.Dispose();
-
-                            appPages = appPages + "," + "image" + pageCount + ".png";
-
-                            appRatios = appRatios + "," + Aratio;
-
-                            appHeights = appHeights + "," + height;
-                        }
-                    }                   
-
-                }
-
-
-                return appPages + "%#" + appRatios + "%#" + appHeights;
-           
         }
 
         [WebMethod]
         public static string btnTextExport_Click(string fileType)
         {
-          Document doc = new Document(HttpContext.Current.Server.MapPath("Convert/Export.pdf"));
+            Document doc = new Document(HttpContext.Current.Server.MapPath("Convert/Export.pdf"));
 
-                switch (fileType)
-                {
-                    case "txt":
+            switch (fileType)
+            {
+                case "txt":
 
-                        //create TextAbsorber object to extract text
-                        TextAbsorber textAbsorber = new TextAbsorber();
+                    //create TextAbsorber object to extract text
+                    TextAbsorber textAbsorber = new TextAbsorber();
 
-                        //accept the absorber for all the pages
-                        doc.Pages.Accept(textAbsorber);
+                    //accept the absorber for all the pages
+                    doc.Pages.Accept(textAbsorber);
 
-                        //get the extracted text
-                        string extractedText = textAbsorber.Text;
+                    //get the extracted text
+                    string extractedText = textAbsorber.Text;
 
-                        System.IO.File.WriteAllText(HttpContext.Current.Server.MapPath("Convert/output.txt"), extractedText);
-                        return "output.txt";
-                    case "pdf":
-                        return "Export.pdf";
-                    case "docx":
-                        doc.Save(HttpContext.Current.Server.MapPath("Convert/output.docx"), SaveFormat.DocX);
-                        return "output.docx";
-                    case "svg":
-                        doc.Save(HttpContext.Current.Server.MapPath("Convert/output.svg"), SaveFormat.Svg);
-                        return "output.svg";
-                    case "xps":
-                        doc.Save(HttpContext.Current.Server.MapPath("Convert/output.xps"), SaveFormat.Xps);
-                        return "output.xps";
-                    case "xls":
-                        doc.Save(HttpContext.Current.Server.MapPath("Convert/output.xls"), SaveFormat.Excel);
-                        return "output.xls";
-                    case "html":
-                        doc.Save(HttpContext.Current.Server.MapPath("Convert/output.html"), SaveFormat.Html);
-                        return "output.html";
-                    default:
-                        return "";
-                }
-           
+                    System.IO.File.WriteAllText(HttpContext.Current.Server.MapPath("Convert/output.txt"), extractedText);
+                    return "output.txt";
+                case "pdf":
+                    return "Export.pdf";
+                case "docx":
+                    doc.Save(HttpContext.Current.Server.MapPath("Convert/output.docx"), SaveFormat.DocX);
+                    return "output.docx";
+                case "svg":
+                    doc.Save(HttpContext.Current.Server.MapPath("Convert/output.svg"), SaveFormat.Svg);
+                    return "output.svg";
+                case "xps":
+                    doc.Save(HttpContext.Current.Server.MapPath("Convert/output.xps"), SaveFormat.Xps);
+                    return "output.xps";
+                case "xls":
+                    doc.Save(HttpContext.Current.Server.MapPath("Convert/output.xls"), SaveFormat.Excel);
+                    return "output.xls";
+                case "html":
+                    doc.Save(HttpContext.Current.Server.MapPath("Convert/output.html"), SaveFormat.Html);
+                    return "output.html";
+                default:
+                    return "";
+            }
+
 
         }
-             
+
 
         public static int GetHighestPage()
         {
@@ -745,73 +749,73 @@ namespace AsposePdfEditor
 
             Document doc = new Document(HttpContext.Current.Server.MapPath("Convert/output.pdf"));
 
-                
 
-                for (int i = 1; i <= doc.Pages.Count; i++)
+
+            for (int i = 1; i <= doc.Pages.Count; i++)
+            {
+                string filename = "Input/" + pageList[i - 1];
+                filename = filename.Replace("image", "image-1");
+                Bitmap bmp = (Bitmap)Bitmap.FromFile(HttpContext.Current.Server.MapPath(filename));
+                using (System.Drawing.Graphics gr = System.Drawing.Graphics.FromImage(bmp))
                 {
-                    string filename = "Input/" + pageList[i-1];
-                    filename = filename.Replace("image", "image-1");
-                    Bitmap bmp = (Bitmap)Bitmap.FromFile(HttpContext.Current.Server.MapPath(filename));
-                    using (System.Drawing.Graphics gr = System.Drawing.Graphics.FromImage(bmp))
+                    float scale = 150 / 72f;
+                    gr.Transform = new System.Drawing.Drawing2D.Matrix(scale, 0, 0, -scale, 0, bmp.Height);
+
+
+                    Aspose.Pdf.Page page = doc.Pages[i];
+                    //create TextAbsorber object to find all words
+                    TextFragmentAbsorber textFragmentAbsorber = new TextFragmentAbsorber(searchText);
+                    //   textFragmentAbsorber.TextSearchOptions.IsRegularExpressionUsed = true;
+                    page.Accept(textFragmentAbsorber);
+                    //get the extracted text fragments
+                    TextFragmentCollection textFragmentCollection = textFragmentAbsorber.TextFragments;
+
+                    Brush brush = new SolidBrush(System.Drawing.Color.FromArgb(50, 255, 255, 0));
+                    //loop through the fragments
+                    foreach (TextFragment textFragment in textFragmentCollection)
                     {
-                        float scale = 150 / 72f;
-                        gr.Transform = new System.Drawing.Drawing2D.Matrix(scale, 0, 0, -scale, 0, bmp.Height);
-
-
-                        Aspose.Pdf.Page page = doc.Pages[i];
-                        //create TextAbsorber object to find all words
-                        TextFragmentAbsorber textFragmentAbsorber = new TextFragmentAbsorber(searchText);
-                        //   textFragmentAbsorber.TextSearchOptions.IsRegularExpressionUsed = true;
-                        page.Accept(textFragmentAbsorber);
-                        //get the extracted text fragments
-                        TextFragmentCollection textFragmentCollection = textFragmentAbsorber.TextFragments;
-
-                        Brush brush = new SolidBrush(System.Drawing.Color.FromArgb(50, 255, 255, 0));
-                        //loop through the fragments
-                        foreach (TextFragment textFragment in textFragmentCollection)
+                        //  if (i == 0)
                         {
-                            //  if (i == 0)
+                            gr.FillRectangle(
+                            //   gr.DrawRectangle(
+                            brush,
+                            (float)(textFragment.Position.XIndent),
+                            (float)(textFragment.Position.YIndent),
+                            (float)(textFragment.Rectangle.Width),
+                            (float)(textFragment.Rectangle.Height));
+
+                            for (int segNum = 1; segNum <= textFragment.Segments.Count; segNum++)
                             {
-                                gr.FillRectangle(
-                                    //   gr.DrawRectangle(
-                                brush,
-                                (float)(textFragment.Position.XIndent),
-                                (float)(textFragment.Position.YIndent),
-                                (float)(textFragment.Rectangle.Width),
-                                (float)(textFragment.Rectangle.Height));
-
-                                for (int segNum = 1; segNum <= textFragment.Segments.Count; segNum++)
-                                {
-                                    TextSegment segment = textFragment.Segments[segNum];
+                                TextSegment segment = textFragment.Segments[segNum];
 
 
-                                    gr.DrawRectangle(
-                                    Pens.Green,
-                                    (float)segment.Rectangle.LLX,
-                                    (float)segment.Rectangle.LLY,
-                                    (float)segment.Rectangle.Width,
-                                    (float)segment.Rectangle.Height);
-                                }
+                                gr.DrawRectangle(
+                                Pens.Green,
+                                (float)segment.Rectangle.LLX,
+                                (float)segment.Rectangle.LLY,
+                                (float)segment.Rectangle.Width,
+                                (float)segment.Rectangle.Height);
                             }
                         }
-                        gr.Dispose();
                     }
-
-                    bmp.Save(HttpContext.Current.Server.MapPath(filename.Replace("image-1","image_search")), System.Drawing.Imaging.ImageFormat.Png);
-                    bmp.Dispose();
-                   
-                    string height = "";
-                    string Aratio = "";
-                    System.Drawing.Image image = System.Drawing.Image.FromFile(HttpContext.Current.Server.MapPath(filename.Replace("image-1", "image_search")));
-                    ScaleImage(image, 1138, 760, HttpContext.Current.Server.MapPath("search/" + name + "/" + pageList[i - 1]), out height, out Aratio);
-                    image.Dispose();
-
-                  //  System.IO.File.Copy(HttpContext.Current.Server.MapPath("Input/image_search" + i + ".png"), HttpContext.Current.Server.MapPath("Input/image" + i + ".png"));
-
-
+                    gr.Dispose();
                 }
 
-                return name;
+                bmp.Save(HttpContext.Current.Server.MapPath(filename.Replace("image-1", "image_search")), System.Drawing.Imaging.ImageFormat.Png);
+                bmp.Dispose();
+
+                string height = "";
+                string Aratio = "";
+                System.Drawing.Image image = System.Drawing.Image.FromFile(HttpContext.Current.Server.MapPath(filename.Replace("image-1", "image_search")));
+                ScaleImage(image, 1138, 760, HttpContext.Current.Server.MapPath("search/" + name + "/" + pageList[i - 1]), out height, out Aratio);
+                image.Dispose();
+
+                //  System.IO.File.Copy(HttpContext.Current.Server.MapPath("Input/image_search" + i + ".png"), HttpContext.Current.Server.MapPath("Input/image" + i + ".png"));
+
+
+            }
+
+            return name;
         }
 
         public static string AddAttachments(string path, string filename)
@@ -861,7 +865,7 @@ namespace AsposePdfEditor
                     outAttach = outAttach.Substring(1);
                 }
             }
-                return outAttach;
+            return outAttach;
         }
 
         [System.Web.Services.WebMethod()]
@@ -890,13 +894,13 @@ namespace AsposePdfEditor
 
             // Create TextAbsorber object to extract text
             TextAbsorber textAbsorber = new TextAbsorber();
-            
+
             // Accept the absorber for all the pages
             pdfDocument.Pages[1].Accept(textAbsorber);
-            
+
             // Get the extracted text
             String extractedText = textAbsorber.Text;
-            
+
             if (extractedText.Contains("Evaluation Only. Created with Aspose.Pdf"))
             {
                 return false;
@@ -917,8 +921,8 @@ namespace AsposePdfEditor
                 file.Delete();
             }
             Random random = new Random();
-            int rand =  random.Next(1000000);
-            string fileNameWitPath = HttpContext.Current.Server.MapPath("Images/Signature/sign"+rand+".png");
+            int rand = random.Next(1000000);
+            string fileNameWitPath = HttpContext.Current.Server.MapPath("Images/Signature/sign" + rand + ".png");
             using (FileStream fs = new FileStream(fileNameWitPath, FileMode.Create))
             {
                 using (BinaryWriter bw = new BinaryWriter(fs))
@@ -998,58 +1002,61 @@ namespace AsposePdfEditor
                 }
             }
             catch (Exception exp)
-            { 
-                
+            {
+
             }
             return "success";
         }
 
         public static void Startup()
         {
-
-            System.IO.DirectoryInfo downloadedMessageInfo = new DirectoryInfo(HttpContext.Current.Server.MapPath("Input/"));
-
-            foreach (FileInfo file in downloadedMessageInfo.GetFiles())
+            try
             {
-                file.Delete();
+                System.IO.DirectoryInfo downloadedMessageInfo = new DirectoryInfo(HttpContext.Current.Server.MapPath("Input/"));
+                foreach (FileInfo file in downloadedMessageInfo.GetFiles())
+                {
+                    file.Delete();
+                }
+                downloadedMessageInfo = new DirectoryInfo(HttpContext.Current.Server.MapPath("Attachments/"));
+
+                foreach (FileInfo file in downloadedMessageInfo.GetFiles())
+                {
+                    file.Delete();
+                }
+
+                downloadedMessageInfo = new DirectoryInfo(HttpContext.Current.Server.MapPath("Images/"));
+
+                foreach (FileInfo file in downloadedMessageInfo.GetFiles())
+                {
+                    file.Delete();
+                }
+
+                downloadedMessageInfo = new DirectoryInfo(HttpContext.Current.Server.MapPath("Images/Signature/"));
+
+                foreach (FileInfo file in downloadedMessageInfo.GetFiles())
+                {
+                    file.Delete();
+                }
+
+                downloadedMessageInfo = new DirectoryInfo(HttpContext.Current.Server.MapPath("search/"));
+
+                foreach (FileInfo file in downloadedMessageInfo.GetFiles())
+                {
+                    file.Delete();
+                }
+                foreach (DirectoryInfo dir in downloadedMessageInfo.GetDirectories())
+                {
+                    dir.Delete(true);
+                }
             }
-
-            downloadedMessageInfo = new DirectoryInfo(HttpContext.Current.Server.MapPath("Attachments/"));
-
-            foreach (FileInfo file in downloadedMessageInfo.GetFiles())
+            catch (Exception)
             {
-                file.Delete();
+                throw;
             }
-
-            downloadedMessageInfo = new DirectoryInfo(HttpContext.Current.Server.MapPath("Images/"));
-
-            foreach (FileInfo file in downloadedMessageInfo.GetFiles())
-            {
-                file.Delete();
-            }
-
-            downloadedMessageInfo = new DirectoryInfo(HttpContext.Current.Server.MapPath("Images/Signature/"));
-
-            foreach (FileInfo file in downloadedMessageInfo.GetFiles())
-            {
-                file.Delete();
-            }
-
-            downloadedMessageInfo = new DirectoryInfo(HttpContext.Current.Server.MapPath("search/"));
-
-            foreach (FileInfo file in downloadedMessageInfo.GetFiles())
-            {
-                file.Delete();
-            }
-            foreach (DirectoryInfo dir in downloadedMessageInfo.GetDirectories())
-            {
-                dir.Delete(true);
-            }
-        
         }
         public static Aspose.Pdf.Color GetColor(string color)
-        { 
-            switch(color)
+        {
+            switch (color)
             {
                 case "red":
                     return Aspose.Pdf.Color.Red;
@@ -1094,7 +1101,7 @@ namespace AsposePdfEditor
 
     }
 
-    
+
 
 
 }
